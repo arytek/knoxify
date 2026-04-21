@@ -1,0 +1,6 @@
+flask>=3.0
+pillow>=10.0
+requests>=2.31
+pyproj>=3.6
+shapely>=2.0
+numpy>=1.26
