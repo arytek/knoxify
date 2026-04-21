@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PZ Real World Map Generator</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<link rel="stylesheet" href="/static/css/app.css"/>
+</head>
+<body>
+<header>
+  <h1>PZ Real World Map Generator</h1>
+  <p class="subtitle">Turn any spot on Earth into a Project Zomboid map.</p>
+</header>
+
+<main>
+  <section id="map-pane">
+    <div id="map"></div>
+    <div id="map-hint">Use the <strong>rectangle tool</strong> (top-left of the
+      map) to draw an area. Keep it small — Overpass has limits.</div>
+  </section>
+
+  <aside id="controls">
+    <h2>1. Area</h2>
+    <div class="row">
+      <label>South <input type="number" step="0.000001" id="south" readonly></label>
+      <label>West  <input type="number" step="0.000001" id="west"  readonly></label>
+    </div>
+    <div class="row">
+      <label>North <input type="number" step="0.000001" id="north" readonly></label>
+      <label>East  <input type="number" step="0.000001" id="east"  readonly></label>
+    </div>
+    <div id="area-stats">Draw a rectangle to see stats.</div>
+
+    <h2>2. Settings</h2>
+    <label>Map name
+      <input type="text" id="mapName" value="" placeholder="auto-generated if blank"/>
+    </label>
+    <label>Meters per tile
+      <select id="metersPerTile">
+        <option value="0.5">0.5 m / tile (highest detail — small area)</option>
+        <option value="1.0" selected>1.0 m / tile (recommended)</option>
+        <option value="2.0">2.0 m / tile (larger area, less detail)</option>
+        <option value="3.0">3.0 m / tile (big area, blocky)</option>
+      </select>
+    </label>
+    <p class="hint">PZ cells are 300×300 tiles. Output is rounded up to the
+      next cell multiple.</p>
+
+    <h2>3. Generate</h2>
+    <button id="generateBtn" disabled>Generate map</button>
+    <div id="status"></div>
+  </aside>
+</main>
+
+<section id="results" hidden>
+  <h2>Output</h2>
+  <div id="results-grid">
+    <figure>
+      <figcaption>Preview</figcaption>
+      <a id="previewLink" target="_blank"><img id="previewImg" alt="preview"/></a>
+    </figure>
+    <div id="results-info"></div>
+  </div>
+  <h3>Download</h3>
+  <ul id="downloads"></ul>
+  <h3>Next steps</h3>
+  <ol class="next-steps">
+    <li>Unzip <code>&lt;mapname&gt;.zip</code> somewhere WorldEd can reach.</li>
+    <li>In WorldEd, <em>File → New</em>, choose the cell grid shown above.</li>
+    <li>Drag the <code>.bmp</code> landscape file onto the empty grid.</li>
+    <li><em>File → BMP to TMX → All cells</em>.</li>
+    <li>Place <code>.tbx</code> buildings on top in TileZed/BuildingEd.</li>
+    <li><em>File → Generate Lots</em> → copy output into
+      <code>media/maps/</code>.</li>
+  </ol>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
