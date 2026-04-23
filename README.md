@@ -16,7 +16,8 @@ toolchain expects. You import those into WorldEd and you're off.
 The name's a nod to Knox Country, where the PZ universe is set.
 
 This tool follows the workflow described in Thuztor's
-**Mapping Guide v0.2** (included in this repo).
+**Mapping Guide v0.2**, a community resource originally posted on
+[The Indie Stone forums](https://theindiestone.com/forums/).
 
 ### Example output
 
@@ -138,7 +139,6 @@ Road widths (in meters) in source code: `renderer.ROAD_WIDTHS_M`.
 ├── branding/               # Logo + cover (SVG and PNG)
 ├── output/                 # Generated maps (gitignored in practice)
 ├── test_pipeline.py        # End-to-end smoke test
-├── Mapping Guide_v0.2.pdf  # Thuztor's guide, the source of the spec
 └── requirements.txt
 ```
 
