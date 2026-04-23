@@ -4,5 +4,5 @@ __pycache__/
 .DS_Store
 output/
 !output/.gitkeep
-
-
+.claude/
+CLAUDE.local.md
