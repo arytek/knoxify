@@ -220,7 +220,7 @@
 
   <!-- Small footer text -->
   <g font-family="Consolas, 'Courier New', monospace" font-size="13" fill="#7a8d46" opacity="0.85">
-    <text x="72" y="580">github.com / knoxify</text>
+    <text x="72" y="580">github.com/arytek/knoxify</text>
     <text x="1208" y="580" text-anchor="end">v1.0</text>
   </g>
 </svg>
