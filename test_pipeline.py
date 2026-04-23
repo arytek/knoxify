@@ -1,4 +1,4 @@
-"""Smoke test: render a tiny area end-to-end."""
+"""Knoxify smoke test: render a tiny area end-to-end."""
 from __future__ import annotations
 
 import shutil

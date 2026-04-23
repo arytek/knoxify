@@ -1,4 +1,4 @@
-// PZ Real World Map Generator — frontend.
+// Knoxify — frontend.
 //
 // - Leaflet map with leaflet-draw for selecting the bbox.
 // - Area stats update live as the rectangle is drawn/edited.

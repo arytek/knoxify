@@ -1,16 +1,28 @@
-# PZ Real World Map Generator
+<p align="center">
+  <img src="branding/logo.svg" width="160" alt="Knoxify logo"/>
+</p>
 
-Turn any real-world area into a Project Zomboid map.
+<h1 align="center">Knoxify</h1>
 
-You pick a spot on an interactive map. The tool queries OpenStreetMap for
-the terrain there — roads, water, forests, grass, buildings — and rasterizes
-it into the three BMP files that Project Zomboid's mapping toolchain
-expects. You import those into WorldEd and you're off.
+<p align="center"><em>Turn any place on Earth into a Project Zomboid map.</em></p>
+
+![Cover](branding/cover.svg)
+
+You pick a spot on an interactive world map. Knoxify queries OpenStreetMap
+for the terrain there — roads, water, forests, grass, buildings — and
+rasterizes it into the three BMP files that Project Zomboid's mapping
+toolchain expects. You import those into WorldEd and you're off.
+
+The name's a nod to Knox Country, where the PZ universe is set.
 
 This tool follows the workflow described in Thuztor's
 **Mapping Guide v0.2** (included in this repo).
 
-![Preview](output/_smoketest/smoketest_preview.png)
+### Example output
+
+A 600 × 900 tile chunk of Lexington, KY (2 × 3 PZ cells):
+
+![Smoketest preview](output/_smoketest/smoketest_preview.png)
 
 ## What it does
 
@@ -21,7 +33,7 @@ This tool follows the workflow described in Thuztor's
   - `<mapname>.bmp` — landscape (grass, asphalt, dirt, water, sand)
   - `<mapname>_veg.bmp` — vegetation (trees, bushes)
   - `<mapname>_ZombieSpawnMap.bmp` — grayscale spawn density (1/10 scale)
-- Rounds the output to PZ's 300×300 tile cell grid.
+- Rounds the output to PZ's 300 × 300 tile cell grid.
 - Exports a preview PNG, building-footprint GeoJSON, and a ZIP bundle.
 - Writes a README in each output folder telling you how to import.
 
@@ -33,7 +45,7 @@ them cleanly.
 
 **It does not build Project Zomboid buildings.** PZ buildings are `.tbx`
 files you assemble in BuildingEd; they can't be derived from OSM footprints.
-The tool exports OSM building outlines as GeoJSON + a placeholder dirt
+Knoxify exports OSM building outlines as GeoJSON + a placeholder dirt
 footprint so you can see where real-world buildings sit and drop matching
 `.tbx` lots on top in WorldEd.
 
@@ -73,7 +85,7 @@ Open <http://127.0.0.1:5000/>. Draw a rectangle, pick a scale, click
    - `0.5 m/tile` — highest detail, small areas only
    - `1.0 m/tile` — recommended (matches PZ's rough scale)
    - `2.0 m/tile` — bigger area, chunkier roads
-5. (Optional) Give your map a name.
+5. (Optional) Give your map a name. Defaults to `knoxify_<timestamp>`.
 6. Click **Generate map**. Overpass + rendering takes 10–60 s.
 7. Download the `.zip` — it contains all three BMPs + a per-map README.
 
@@ -123,6 +135,7 @@ Road widths (in meters) in source code: `renderer.ROAD_WIDTHS_M`.
 │   └── renderer.py         # Projection + rasterization into BMPs
 ├── templates/index.html    # Leaflet UI
 ├── static/{css,js}/        # Frontend assets
+├── branding/               # Logo + cover (SVG and PNG)
 ├── output/                 # Generated maps (gitignored in practice)
 ├── test_pipeline.py        # End-to-end smoke test
 ├── Mapping Guide_v0.2.pdf  # Thuztor's guide, the source of the spec
@@ -135,7 +148,7 @@ next 300-tile cell multiple before rendering.
 
 ## Smoke test
 
-Runs a 600m × 900m chunk of Lexington, KY end-to-end:
+Runs a 600 m × 900 m chunk of Lexington, KY end-to-end:
 
 ```bash
 source .venv/bin/activate
@@ -143,6 +156,13 @@ python test_pipeline.py
 ```
 
 Check `output/_smoketest/smoketest_preview.png` afterward.
+
+## Branding assets
+
+- `branding/logo.svg` + `branding/logo.png` — 512 × 512 square logo.
+- `branding/cover.svg` + `branding/cover.png` — 1280 × 640 cover (matches
+  GitHub's social-preview dimensions). Upload the PNG under *Settings →
+  Social preview* so link unfurls on Twitter/Slack/Discord show the cover.
 
 ## Credits
 
