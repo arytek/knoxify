@@ -23,7 +23,7 @@ This tool follows the workflow described in Thuztor's
 
 A 600 × 900 tile chunk of Lexington, KY (2 × 3 PZ cells):
 
-![Smoketest preview](output/_smoketest/smoketest_preview.png)
+![Smoketest preview](branding/smoketest_preview.png)
 
 ## What it does
 
