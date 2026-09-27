@@ -16,8 +16,9 @@ import math
 import os
 import random
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Callable, Iterable
 
+import numpy as np
 import pyproj
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -190,7 +191,15 @@ class RenderResult:
 def render(features: Iterable[OSMFeature], south: float, west: float,
            north: float, east: float, meters_per_tile: float,
            output_dir: str, map_name: str,
-           spawn_density: int = 96) -> RenderResult:
+           spawn_density: int = 96,
+           *,
+           extra_meta: dict | None = None,
+           progress: Callable[[float, str], None] | None = None,
+           check_cancel: Callable[[], None] | None = None) -> RenderResult:
+    report = progress or (lambda fraction, message: None)
+    check = check_cancel or (lambda: None)
+    check()
+    report(0, "Preparing terrain")
     proj = Projector.build(south, west, north, east, meters_per_tile)
     landscape = Image.new("RGB", (proj.width, proj.height), C.DARK_GRASS)
     vegetation = Image.new("RGB", (proj.width, proj.height), C.VEG_NOTHING)
@@ -211,11 +220,14 @@ def render(features: Iterable[OSMFeature], south: float, west: float,
             building_feats.append(feat)
         buckets.setdefault(cat, []).append(feat)
 
+    total_features = max(1, sum(len(items) for items in buckets.values()))
+    painted = 0
     for cat in LANDSCAPE_ORDER:
         fill = LANDSCAPE_FILL.get(cat)
         if fill is None:
             continue
         for feat in buckets.get(cat, []):
+            check()
             rings = _feature_coords_px(feat, proj)
             if cat in ROAD_WIDTHS_M:
                 width_px = ROAD_WIDTHS_M[cat] / meters_per_tile
@@ -225,15 +237,25 @@ def render(features: Iterable[OSMFeature], south: float, west: float,
             else:
                 # Unexpected: linear water like a stream. Draw it narrow.
                 _draw_line(l_draw, rings, fill, max(1, int(3 / meters_per_tile)))
+            painted += 1
+            if painted % 100 == 0:
+                report(0.3 * painted / total_features, "Painting roads, water and terrain")
 
-    _paint_vegetation(vegetation, landscape, vegetation_feats, proj)
+    report(0.3, "Painting vegetation")
+    _paint_vegetation(vegetation, landscape, vegetation_feats, proj,
+                      progress=lambda fraction: report(0.3 + 0.25 * fraction, "Painting vegetation"),
+                      check_cancel=check)
 
     # --- zombie spawn map (10x smaller, grayscale) ---
     spawn_w = proj.width // C.SPAWN_MAP_SCALE
     spawn_h = proj.height // C.SPAWN_MAP_SCALE
+    check()
+    report(0.55, "Building zombie population map")
     spawn_map = _build_spawn_map(landscape, spawn_w, spawn_h, spawn_density)
 
     # --- preview (landscape + vegetation blended) ---
+    check()
+    report(0.65, "Creating preview")
     preview = _build_preview(landscape, vegetation)
 
     # --- output files ---
@@ -245,29 +267,38 @@ def render(features: Iterable[OSMFeature], south: float, west: float,
     buildings_path = os.path.join(output_dir, f"{map_name}_buildings.geojson")
     meta_path = os.path.join(output_dir, f"{map_name}_info.json")
 
-    landscape.save(landscape_path, format="BMP")
-    vegetation.save(veg_path, format="BMP")
-    spawn_map.save(spawn_path, format="BMP")
-    preview.save(preview_path, format="PNG")
+    for index, (image, path, kind) in enumerate([
+        (landscape, landscape_path, "BMP"), (vegetation, veg_path, "BMP"),
+        (spawn_map, spawn_path, "BMP"), (preview, preview_path, "PNG"),
+    ]):
+        check()
+        report(0.7 + index * 0.06, f"Writing image {index + 1} of 4")
+        image.save(path, format=kind)
+        image.close()
 
     with open(buildings_path, "w") as f:
         json.dump(_buildings_geojson(building_feats), f)
 
     cells_x, cells_y = proj.cell_grid()
+    meta = {
+        "map_name": map_name,
+        "bbox": {"south": south, "west": west, "north": north, "east": east},
+        "meters_per_tile": meters_per_tile,
+        "width_tiles": proj.width,
+        "height_tiles": proj.height,
+        "cells_x": cells_x,
+        "cells_y": cells_y,
+        "spawn_density_max": spawn_density,
+        "building_count": len(building_feats),
+        "guide_reference": "Thuztor Mapping Guide v0.2",
+    }
+    if extra_meta:
+        meta["source"] = extra_meta
     with open(meta_path, "w") as f:
-        json.dump({
-            "map_name": map_name,
-            "bbox": {"south": south, "west": west, "north": north, "east": east},
-            "meters_per_tile": meters_per_tile,
-            "width_tiles": proj.width,
-            "height_tiles": proj.height,
-            "cells_x": cells_x,
-            "cells_y": cells_y,
-            "spawn_density_max": spawn_density,
-            "building_count": len(building_feats),
-            "guide_reference": "Thuztor Mapping Guide v0.2",
-        }, f, indent=2)
+        json.dump(meta, f, indent=2)
 
+    check()
+    report(1, "Map images ready")
     return RenderResult(
         landscape_path=landscape_path,
         vegetation_path=veg_path,
@@ -283,19 +314,25 @@ def render(features: Iterable[OSMFeature], south: float, west: float,
 
 
 def _paint_vegetation(veg: Image.Image, landscape: Image.Image,
-                      feats: list[OSMFeature], proj: Projector) -> None:
+                      feats: list[OSMFeature], proj: Projector,
+                      progress=lambda fraction: None,
+                      check_cancel=lambda: None) -> None:
     """Paint trees on the vegetation bitmap.
 
     Forest polygons get full density (TREES), scrub becomes bushes+trees,
     single-tree nodes become small dots. Forest edges get downgraded to a
     mix with dark grass so the transition isn't a hard rectangle.
     """
+    if not feats:
+        progress(1)
+        return
     mask = Image.new("L", veg.size, 0)
     mask_draw = ImageDraw.Draw(mask)
     scrub_mask = Image.new("L", veg.size, 0)
     scrub_draw = ImageDraw.Draw(scrub_mask)
 
     for feat in feats:
+        check_cancel()
         cat = classify(feat.tags)
         rings = _feature_coords_px(feat, proj)
         if cat == "forest":
@@ -316,30 +353,29 @@ def _paint_vegetation(veg: Image.Image, landscape: Image.Image,
 
     # Build a "border band" of the forest mask so we can paint edges lighter.
     eroded = mask.filter(ImageFilter.MinFilter(5))
-    veg_px = veg.load()
-    mask_px = mask.load()
-    eroded_px = eroded.load()
-    scrub_px = scrub_mask.load()
-    land_px = landscape.load()
-
     w, h = veg.size
-    for y in range(h):
-        for x in range(w):
-            if scrub_px[x, y]:
-                veg_px[x, y] = C.BUSHES_TREES_DARK_GRASS
-            if mask_px[x, y]:
-                # Only paint trees on grass / dirt. Skip water, roads, buildings.
-                lp = land_px[x, y]
-                if lp == C.WATER:
-                    continue
-                if eroded_px[x, y]:
-                    veg_px[x, y] = C.TREES
-                else:
-                    veg_px[x, y] = C.TREES_DARK_GRASS
-                # Trees on a grass tile → switch the landscape to DARK_GRASS
-                # so the PZ renderer is happy (trees sit on dark grass best).
-                if lp in (C.MEDIUM_GRASS, C.LIGHT_GRASS):
-                    land_px[x, y] = C.DARK_GRASS
+    # Work in strips to avoid several full-map NumPy copies on large exports.
+    rows = max(1, min(256, 1_000_000 // w))
+    for y in range(0, h, rows):
+        check_cancel()
+        box = (0, y, w, min(h, y + rows))
+        land = np.array(landscape.crop(box))
+        pixels = np.array(veg.crop(box))
+        forest = np.asarray(mask.crop(box)) != 0
+        dense = np.asarray(eroded.crop(box)) != 0
+        scrub = np.asarray(scrub_mask.crop(box)) != 0
+        pixels[scrub] = C.BUSHES_TREES_DARK_GRASS
+        forest &= ~np.all(land == C.WATER, axis=2)
+        pixels[forest & dense] = C.TREES
+        pixels[forest & ~dense] = C.TREES_DARK_GRASS
+        grass = np.all(land == C.MEDIUM_GRASS, axis=2) | np.all(land == C.LIGHT_GRASS, axis=2)
+        land[forest & grass] = C.DARK_GRASS
+        veg.paste(Image.fromarray(pixels), box)
+        landscape.paste(Image.fromarray(land), box)
+        progress(box[3] / h)
+    mask.close()
+    eroded.close()
+    scrub_mask.close()
 
 
 def _build_spawn_map(landscape: Image.Image, w: int, h: int,
@@ -375,19 +411,14 @@ def _build_spawn_map(landscape: Image.Image, w: int, h: int,
 
 
 def _build_preview(landscape: Image.Image, vegetation: Image.Image) -> Image.Image:
-    """Human-friendly PNG: landscape with trees painted dark green."""
-    preview = landscape.copy()
-    lp = preview.load()
-    vp = vegetation.load()
-    w, h = preview.size
-    tree_colors = {C.TREES, C.TREES_DARK_GRASS, C.SPARSE_TREES,
-                   C.BUSHES_TREES_DARK_GRASS}
-    for y in range(h):
-        for x in range(w):
-            v = vp[x, y]
-            if v in tree_colors:
-                lp[x, y] = (40, 75, 35) if v == C.TREES else (65, 95, 45)
-    return preview
+    """Bounded preview; the export BMPs retain their full resolution."""
+    scale = min(1, 1600 / max(landscape.size))
+    size = tuple(max(1, round(side * scale)) for side in landscape.size)
+    pixels = np.array(landscape.resize(size, Image.Resampling.NEAREST))
+    veg = np.asarray(vegetation.resize(size, Image.Resampling.NEAREST))
+    for color in (C.TREES, C.TREES_DARK_GRASS, C.SPARSE_TREES, C.BUSHES_TREES_DARK_GRASS):
+        pixels[np.all(veg == color, axis=2)] = (40, 75, 35) if color == C.TREES else (65, 95, 45)
+    return Image.fromarray(pixels)
 
 
 def _buildings_geojson(feats: list[OSMFeature]) -> dict:

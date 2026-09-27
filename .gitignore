@@ -6,3 +6,4 @@ output/
 !output/.gitkeep
 .claude/
 CLAUDE.local.md
+.playwright-cli/

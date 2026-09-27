@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Knoxify — real-world areas into Project Zomboid maps</title>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
@@ -24,11 +25,30 @@
   <section id="map-pane">
     <div id="map"></div>
     <div id="map-hint">Use the <strong>rectangle tool</strong> (top-left of the
-      map) to draw an area. Keep it small — Overpass has limits.</div>
+      map) to draw any area. Large exports take longer.</div>
   </section>
 
   <aside id="controls">
-    <h2>1. Area</h2>
+    <h2>1. Place</h2>
+    <div class="search-row">
+      <label>Location
+        <input type="search" id="placeSearch" placeholder="Louisville, KY"/>
+      </label>
+      <button id="searchBtn" type="button">Search</button>
+    </div>
+    <div id="search-status"></div>
+    <ul id="search-results"></ul>
+
+    <h2>2. Area</h2>
+    <div class="row">
+      <label>Cells wide
+        <input type="number" id="cellsWide" min="1" value="4"/>
+      </label>
+      <label>Cells tall
+        <input type="number" id="cellsTall" min="1" value="4"/>
+      </label>
+    </div>
+    <button id="presetBtn" type="button" class="secondary">Use map center</button>
     <div class="row">
       <label>South <input type="number" step="0.000001" id="south" readonly></label>
       <label>West  <input type="number" step="0.000001" id="west"  readonly></label>
@@ -39,7 +59,24 @@
     </div>
     <div id="area-stats">Draw a rectangle to see stats.</div>
 
-    <h2>2. Settings</h2>
+    <h2>3. Map data</h2>
+    <div id="pack-status" role="status" aria-live="polite">
+      Select an area to check offline coverage.
+    </div>
+    <button id="packActionBtn" type="button" class="secondary" hidden>Download regional data</button>
+    <div id="pack-progress" hidden>
+      <div class="progress-heading">
+        <label for="pack-progress-bar">Regional data</label>
+        <span id="pack-progress-percent">0%</span>
+      </div>
+      <progress id="pack-progress-bar" max="100" value="0" aria-describedby="pack-progress-detail"></progress>
+      <div id="pack-progress-detail" role="status" aria-live="polite"></div>
+      <button id="packCancelBtn" type="button" class="secondary">Cancel</button>
+    </div>
+    <ul id="installed-packs" aria-label="Downloaded regional data"></ul>
+    <p class="hint">Regional data from Geofabrik and OpenStreetMap contributors.</p>
+
+    <h2>4. Settings</h2>
     <label>Map name
       <input type="text" id="mapName" value="" placeholder="auto-generated if blank"/>
     </label>
@@ -49,14 +86,27 @@
         <option value="1.0" selected>1.0 m / tile (recommended)</option>
         <option value="2.0">2.0 m / tile (larger area, less detail)</option>
         <option value="3.0">3.0 m / tile (big area, blocky)</option>
+        <option value="4.0">4.0 m / tile (largest area, coarse)</option>
       </select>
     </label>
     <p class="hint">PZ cells are 300×300 tiles. Output is rounded up to the
       next cell multiple.</p>
 
-    <h2>3. Generate</h2>
+    <h2>5. Generate</h2>
     <button id="generateBtn" disabled>Generate map</button>
-    <div id="status"></div>
+    <div id="generation-progress" hidden>
+      <div class="progress-heading">
+        <label for="generation-bar">Export progress</label>
+        <span id="progress-percent">0%</span>
+      </div>
+      <progress id="generation-bar" max="100" value="0" aria-describedby="progress-detail"></progress>
+      <div id="progress-detail" role="status" aria-live="polite"></div>
+      <div class="progress-footer">
+        <span id="progress-elapsed">0:00 elapsed</span>
+        <button id="cancelBtn" type="button" class="secondary">Cancel</button>
+      </div>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
   </aside>
 </main>
 
