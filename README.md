@@ -232,8 +232,8 @@ worlds; offline map data removes API constraints but not image-memory limits.
 ### Automated checks
 
 ```bat
-python -m unittest test_osm_fetch.py test_app_search.py test_jobs.py test_renderer.py test_packs.py
-node --test test_frontend.cjs
+python -m unittest discover -s tests -t .
+node --test tests/test_frontend.cjs
 ```
 
 These checks run offline. The separate smoke test below uses the live map service.
@@ -244,7 +244,7 @@ Runs a 600 m × 900 m chunk of Lexington, KY end-to-end:
 
 ```bash
 source .venv/bin/activate
-python test_pipeline.py
+python tests/test_pipeline.py
 ```
 
 Check `output/_smoketest/smoketest_preview.png` afterward.
